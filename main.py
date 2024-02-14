@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from fastapi.openapi.utils import get_openapi
 from x_field import x_field
+from item import Item
 
 app = FastAPI()
 
@@ -16,7 +17,7 @@ async def read_items2():
 
 @app.post("/items/")
 @x_field(x_example="Example POST", x_description="An example x-field for demons")
-async def read_items():
+async def post_items(item: Item):
     return [{"name": "Foo"}]
 
 def custom_openapi():
