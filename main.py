@@ -1,10 +1,21 @@
 from fastapi import FastAPI
 from fastapi.openapi.utils import get_openapi
+from x_field import x_field
 
 app = FastAPI()
 
 # Define your API routes here
 @app.get("/items/")
+@x_field(x_example="Example GET", x_description="An example x-field for demons")
+async def read_items():
+    return [{"name": "Foo"}]
+
+@app.get("/items2/")
+async def read_items2():
+    return [{"name": "Foo"}]
+
+@app.post("/items/")
+@x_field(x_example="Example POST", x_description="An example x-field for demons")
 async def read_items():
     return [{"name": "Foo"}]
 
@@ -13,15 +24,24 @@ def custom_openapi():
         return app.openapi_schema
     openapi_schema = get_openapi(
         title="Custom title",
-        version="2.5.0",
+        version="1.0.0",
         description="This is a very custom OpenAPI schema",
         routes=app.routes,
     )
-    # Add custom x- field at the root of the schema
-    openapi_schema["x-custom-field"] = "value"
-    # You can also add custom x- fields in other parts of the schema,
-    # for example, within a path object
-    openapi_schema["paths"]["/items/"]["get"]["x-custom-operation-field"] = "value"
+
+    for route in app.routes:
+        if hasattr(route, "endpoint") and hasattr(route.endpoint, "x_fields"):
+            x_fields = getattr(route.endpoint, "x_fields")
+            # Identify the route's operations in the OpenAPI schema
+            for method in route.methods:
+                # Normalize HTTP method to lowercase
+                method_lower = method.lower()
+                # Access the route in OpenAPI schema if it exists
+                if route.path in openapi_schema["paths"] and method_lower in openapi_schema["paths"][route.path]:
+                    operation = openapi_schema["paths"][route.path][method_lower]
+                    # Apply x_fields to the operation
+                    operation.update(x_fields)
+
     app.openapi_schema = openapi_schema
     return app.openapi_schema
 
@@ -29,3 +49,7 @@ app.openapi = custom_openapi
 
 # Run the app with:
 # uvicorn main:app --reload
+
+# get the openapi schema with:
+# curl -X 'GET' 'http://localhost:8000/openapi.json'
+
